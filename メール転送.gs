@@ -163,10 +163,11 @@ function sendWordpress(date, url, url_text, site_name, text)
   var month = date.replace(/月.+?日/gi, "月");
   var category = year+","+month+","+date;
   var publicize = "twitter";
-  var thumnail = "https://blinky.nemui.org/shot/large?"+url;
-  var tweet = date+" - "+url_text+"\n"+thumnail;
-  var link = date+" - "+"<a href=\""+url+"\" target=\"_blank\">"+url_text + "\n"+thumnail+"</a>";
-  var body = "[title "+url_text+"][category "+category+"][publicize "+publicize+"]"+tweet+"[/publicize]\n"+link+" - "+site_name+"\n\n"+text;
+  var thumnail_url = "https://blinky.nemui.org/shot/large?"+url;
+  var thumnail_link = "<a href=\""+url+"\" target=\"_blank\">"+thumnail_url+"</a>";
+  var tweet = date+" - "+url_text+"\n"+thumnail_url;
+  var link = date+" - "+"<a href=\""+url+"\" target=\"_blank\">"+url_text+"</a>";
+  var body = "[title "+url_text+"][category "+category+"][publicize "+publicize+"]"+tweet+"[/publicize]\n"+link+" - "+site_name+"\n\n"+text+"\n"+thumnail_link;
   var option = {htmlBody:body};
   
   GmailApp.sendEmail(mail, tweet, body, option); // sendEmail(recipient, subject, body, options)
