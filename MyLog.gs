@@ -16,7 +16,7 @@ var MyLog = (function() {
     } else {
       this.logSheet = this.LOG_SHEET;
     }
-  }
+  };
   
   var p = MyLog.prototype;
   
