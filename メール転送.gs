@@ -1,23 +1,60 @@
 'use strict';
 
+/**
+* エントリポイント
+*/
 function main()
 {
   var mc = new MuroranCollection();
   mc.main();
 }
 
-// クラスとコンストラクタは関数を使って定義します
+/**
+* 処理用のクラス
+*/
 var MuroranCollection = (function() {
+  /** @constructor */
   var MuroranCollection = function() {
     if(!(this instanceof MuroranCollection)) {
       return new MuroranCollection();
     }
+    
+    /**
+    * ログ出力オブジェクト
+    * @type {MyLog}
+    */
     this.myLog = new MyLog(SpreadsheetApp.getActiveSpreadsheet().getSheetByName('log'));
+    
+    /**
+    * メール送信した内容を記録するシート
+    * @type {Sheet}
+    */
     this.sendmailSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('sendmail');
+    
+    /**
+    * メール送信情報を記録するシート
+    * @type {Sheet}
+    */
     this.statusSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('status');
+    
+    /**
+    * メール送信した内容を記録するシートのメール最終送信日のセル
+    * @type {Range}
+    */
+    this.mailDateCell = this.statusSheet.getRange(2, 1); // メールの最終送信日
+    
+    /**
+    * メール送信した内容を記録するシートのメール送信回数のセル
+    * @type {Range}
+    */
+    this.mailCountCell = this.statusSheet.getRange(2, 2); // メールの送信回数
   };
   
   var p = MuroranCollection.prototype;
+  
+  /**
+  * メイン処理
+  */
   p.main = function()
   {
     var start = 0;
@@ -25,12 +62,19 @@ var MuroranCollection = (function() {
     var threads = GmailApp.search('label:webアプリ-google-googlealerts-室蘭 is:unread', start, max);
     
     this.myLog.clear();
-    this.myLog.debug("debug");
     
-    // シートを一旦クリア
-    //sendmailSheet.clear();
+    // メールの送信回数の確認
+    var nowDate = new Date();
+    var now = Utilities.formatDate( nowDate, 'Asia/Tokyo', 'yyyy年M月d日');
+    var preSendDate = Utilities.formatDate( this.mailDateCell.getValue(), 'Asia/Tokyo', 'yyyy年M月d日');
+    this.mailDateCell.setValue(nowDate);
+    if(preSendDate != now)
+    {
+      // 日付が変わっていた場合、メール送信回数をリセットする
+      this.mailCountCell.setValue(0);
+    }
     
-    // 古い上位法の削除
+    // 古い情報の削除
     var lastRowCount = this.sendmailSheet.getLastRow();
     this.myLog.debug(lastRowCount);
     if(lastRowCount > 200)
@@ -42,12 +86,16 @@ var MuroranCollection = (function() {
     
     this.execute(threads);
     
-    GmailApp.markThreadsRead(threads);
-    //GmailApp.moveThreadsToTrash(threads);
+    //GmailApp.markThreadsRead(threads); // スレッドを既読にする
+    //GmailApp.moveThreadsToTrash(threads); // スレッドをゴミ箱に移動
     
     return;
   };
   
+  /**
+  * メールスレッドに対して処理を行う。メッセージごとに既読にする
+  * @param {Threads} mailThread メールのスレッド(複数)
+  */
   p.execute = function(mailThread)
   {
     for(var n=0; n<mailThread.length; n++)
@@ -76,10 +124,18 @@ var MuroranCollection = (function() {
           var mailBody = this.sendWordpress(date, url, url_text, site_name, text); // メール送信
           this.sendmailSheet.appendRow([new Date(), mailBody]);
         }
+        
+        // メッセージごとに既読にする
+        msg.markRead();
       }
     }
   };
   
+  /**
+  * メールの内容を取得する
+  * @param {String} text メール本文
+  * @return {Array<Object>} メール情報のオブジェクトを格納した配列
+  */
   p.getMailData = function(text)
   {
     var plainText = text;
@@ -165,8 +221,10 @@ var MuroranCollection = (function() {
     return mailData;
   };
   
-  /*
+  /**
   * メールの内容からHTMLタグを取り除く
+  * @param {String} html HTMLタグを含むメール本文
+  * @return {String} プレーンテキスト
   */
   p.removeHtmlTag = function(html)
   {
@@ -178,11 +236,13 @@ var MuroranCollection = (function() {
     return plainText;
   };
   
-  /*
+  /**
   * HTMLのリンク情報からリンクURLとテキストを取得する
   * [0]: 全体
   * [1]: URL
   * [2]: テキスト
+  * @param {String} html HTMLタグを含む文字列
+  * @return {Array<String>} リンク情報の配列
   */
   p.getLinkData = function(html)
   {
@@ -194,11 +254,11 @@ var MuroranCollection = (function() {
     return linkData;
   };
   
-  /*
+  /**
   * 正規表現で文字列を取り出す。見つからない場合は空文字列を返す
-  * content: 文字列
-  * tempRegExp: RegExpオブジェクト
-  * return: 文字列
+  * @param {String} content HTMLタグを含む文字列
+  * @param {RegExp} tempRegExp 正規表現オブジェクト
+  * @return {String} 取り出した文字列
   */
   p.execRegExp = function(content, tempRegExp)
   {
@@ -211,8 +271,14 @@ var MuroranCollection = (function() {
     return resultStr;
   };
   
-  /*
+  /**
   * Wordpressに投稿する記事をメール送信する
+  * @param {String} date 記事の日付情報
+  * @param {String} url 元記事のリンクURL
+  * @param {String} url_text 元記事のタイトル
+  * @param {String} site_name 元記事のサイト名
+  * @param {String} text 元記事の内容
+  * @return {String} 送信したメール本文
   */
   p.sendWordpress = function(date, url, url_text, site_name, text)
   {
@@ -229,9 +295,12 @@ var MuroranCollection = (function() {
     var body = jetpack_tag+"\n"+link+" - "+site_name+"<br />\n<br />\n"+thumnail_link+"<br />\n"+text;
     var option = {htmlBody:body};
     
-    //GmailApp.sendEmail(mail, tweet, body, option); // sendEmail(recipient, subject, body, options)
+    // メール送信
+    GmailApp.sendEmail(mail, tweet, body, option); // sendEmail(recipient, subject, body, options)
+    this.mailCountCell.setValue(Number(this.mailCountCell.getValue()) + 1);
     this.myLog.info({mail:mail, tweet:tweet, body:body, option:option});
-    Utilities.sleep(1000);
+    
+    Utilities.sleep(1000); // 連続送信を避けるため、ちょっと待機
     
     return body;
   };

@@ -1,6 +1,8 @@
-'use strict'
+'use strict';
 
-// ログ用シートにログ出力するためのオブジェクト
+/**
+* ログ用シートにログ出力するためのオブジェクト
+*/
 var MyLog = (function() {
   /** @const */
   var LOG_SHEET = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('log');
@@ -11,6 +13,11 @@ var MyLog = (function() {
       return new MyLog(this.LOG_SHEET);
     }
     
+    /**
+    * ログ出力用シート
+    * @type {Sheet}
+    */
+    this.logSheet;
     if(logSheet != null) {
       this.logSheet = logSheet;
     } else {
@@ -27,32 +34,32 @@ var MyLog = (function() {
   
   /**
   * 指定したログシートにデバッグログを出力する
-  * @param {string|object} 出力するメッセージ(JSON形式のオブジェクト)
+  * @param {string|object} msg 出力するメッセージ(JSON形式のオブジェクト)
   */
   p.debug = function(msg) { this.log("debug", msg); };
   
   /**
   * 指定したログシートに情報ログを出力する
-  * @param {string|object} 出力するメッセージ(JSON形式のオブジェクト)
+  * @param {string|object} msg 出力するメッセージ(JSON形式のオブジェクト)
   */
   p.info = function(msg) { this.log("info", msg); };
   
   /**
   * 指定したログシートに警告ログを出力する
-  * @param {string|object} 出力するメッセージ(JSON形式のオブジェクト)
+  * @param {string|object} msg 出力するメッセージ(JSON形式のオブジェクト)
   */
   p.warning = function(msg) { this.log("warning", msg); };
   
   /**
   * 指定したログシートにエラーログを出力する
-  * @param {string|object} 出力するメッセージ(JSON形式のオブジェクト)
+  * @param {string|object} msg 出力するメッセージ(JSON形式のオブジェクト)
   */
   p.error = function(msg) { this.log("error", msg); };
   
   /**
   * 指定したログシートにログを出力する
-  * @param {ログの種類} debug, info, warning, error
-  * @param {string|object} 出力するメッセージ(JSON形式のオブジェクト)
+  * @param {ログの種類} type debug, info, warning, error
+  * @param {string|object} msg 出力するメッセージ(JSON形式のオブジェクト)
   */
   p.log = function(type, msg)
   {
