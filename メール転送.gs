@@ -64,10 +64,8 @@ var MuroranCollection = (function() {
     this.myLog.clear();
     
     // メールの送信回数の確認
-    var nowDate = new Date();
-    var now = Utilities.formatDate( nowDate, 'Asia/Tokyo', 'yyyy年M月d日');
-    var preSendDate = Utilities.formatDate( this.mailDateCell.getValue(), 'Asia/Tokyo', 'yyyy年M月d日');
-    this.mailDateCell.setValue(nowDate);
+    var now = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy年M月d日');
+    var preSendDate = Utilities.formatDate(this.mailDateCell.getValue(), 'Asia/Tokyo', 'yyyy年M月d日');
     if(preSendDate != now)
     {
       // 日付が変わっていた場合、メール送信回数をリセットする
@@ -107,9 +105,12 @@ var MuroranCollection = (function() {
         var msg = msgs[m];
         if(!msg.isUnread())
         {
+          // 既読であれば無視する
+          msg.moveToTrash(); // ゴミ箱に移動する
           continue;
         }
         
+        // メッセージごとに処理をする
         var mailMessage = msg.getBody();
         var mailData = this.getMailData(mailMessage);
         
@@ -122,11 +123,15 @@ var MuroranCollection = (function() {
           var site_name = mailData[mail_count]['site_name'];
           
           var mailBody = this.sendWordpress(date, url, url_text, site_name, text); // メール送信
-          this.sendmailSheet.appendRow([new Date(), mailBody]);
+          
+          // シートにメール情報を記録
+          this.mailDateCell.setValue(new Date());
+          this.mailCountCell.setValue(Number(this.mailCountCell.getValue()) + 1);
+          this.sendmailSheet.appendRow([new Date(), mailBody]); // 送信メール本文をシートに記録
         }
         
-        // メッセージごとに既読にする
-        msg.markRead();
+        msg.markRead(); // メッセージごとに既読にする
+        msg.moveToTrash(); // ゴミ箱に移動する
       }
     }
   };
@@ -297,8 +302,7 @@ var MuroranCollection = (function() {
     
     // メール送信
     GmailApp.sendEmail(mail, tweet, body, option); // sendEmail(recipient, subject, body, options)
-    this.mailCountCell.setValue(Number(this.mailCountCell.getValue()) + 1);
-    this.myLog.info({mail:mail, tweet:tweet, body:body, option:option});
+    this.myLog.info({mail:mail, tweet:tweet, option:option});
     
     Utilities.sleep(1000); // 連続送信を避けるため、ちょっと待機
     
