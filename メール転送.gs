@@ -92,21 +92,34 @@ function getMailData(text)
     {
       var content = td[j].replace(/<td.*?>(.*?)<\/td>/gim, "$1");
       
-      // URLの取り出し
+      // URL(リンクアドレス)の取り出し
       var url = content.match(/url=(.+?)&amp;.+/);
       if(url != null)
       {
         mailData[index] = {};
-        mailData[index]['url'] = url[1];
-        
         var tmpResult = "";
         
-        // リンクアドレス
+        // URL(リンクアドレス)
+        var tempUrl = url[1];
+        if(tempUrl.indexOf('%') != -1)
+        {
+          // 「%」を含む場合、URLをデコードする
+          var decUrl = decodeURI(url[1]);
+          if(decUrl.match(/%3A|%2F|%3B|%3F/))
+          {
+            // :=%3A /=%2F ;=%3B ?=%3F
+            decUrl = decodeURIComponent(decUrl);
+          }
+          tempUrl = decUrl;
+        }
+        mailData[index]['url'] = tempUrl;
+        
+        // リンクする文字列
         tempRegExp = new RegExp("<a .+?https://www.google.com/url\?.+?>(.+?)</a>", "gim");
         tmpResult = execRegExp(content, tempRegExp);
         mailData[index]['url_text'] = removeHtmlTag(tmpResult).trim();
         
-        // リンクする文字列
+        // 説明文
         tempRegExp = new RegExp("</div> <div style=.+?>(.+?)</div> </div>", "gim");
         tmpResult = execRegExp(content, tempRegExp);
         mailData[index]['text'] = removeHtmlTag(tmpResult).trim();
