@@ -1,21 +1,27 @@
 'use strict'
-var sendmailSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('sendmail'); //sheets[0];
-var start = 0;
-var max = 3
-var threads = GmailApp.search('label:webアプリ-google-googlealerts-室蘭 is:unread', start, max);
+
+var myLog = new MyLog(SpreadsheetApp.getActiveSpreadsheet().getSheetByName('log'));
 
 function main()
 {
-  LogObj.clear();
+  var sendmailSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('sendmail'); //sheets[0];
+  var start = 0;
+  var max = 3
+  var threads = GmailApp.search('label:webアプリ-google-googlealerts-室蘭 is:unread', start, max);
+  
+  myLog.debug("debug");
+  myLog.clear();
   
   // シートを一旦クリア
   //sendmailSheet.clear();
   
   // 古い上位法の削除
   var lastRowCount = sendmailSheet.getLastRow();
+  myLog.debug(lastRowCount);
   if(lastRowCount > 200)
   {
     var overSize = lastRowCount - 200;
+    myLog.info(overSize);
     sendmailSheet.deleteRows(1, overSize);
   }
   
@@ -28,10 +34,10 @@ function main()
 
 function execute(mailThread)
 {
-  for(var n=0; n<threads.length; n++){
-    var the = threads[n];
+  for(var n=0; n<mailThread.length; n++){
+    var thread = mailThread[n];
     
-    var msgs = the.getMessages();
+    var msgs = thread.getMessages();
     for(var m=0; m<msgs.length; m++){
       var msg = msgs[m];
       if(!msg.isUnread()) {
@@ -77,14 +83,14 @@ function getMailData(text)
   for(var i=0; i<trList.length; i++)
   {
     var t = trList[i];
-    LogObj.log(t);
+    myLog.debug(t);
     var td = t.match(/<td.*?>(.*?)<\/td>/gim);
     
     tempRegExp = new RegExp("<a style=\"color:#aaa;text-decoration:none\">(.+?)</a>", "gim");
     var tempDate = execRegExp(t, tempRegExp);
     if(tempDate != "")
     {
-      LogObj.log(tempDate);
+      myLog.debug(tempDate);
       date = tempDate;
     }
     
@@ -136,14 +142,14 @@ function getMailData(text)
       }
     }
   }
-        
-  LogObj.log(mailData);
+  
+  myLog.debug(mailData);
   return mailData;
 }
 
 /*
- * メールの内容からHTMLタグを取り除く
- */
+* メールの内容からHTMLタグを取り除く
+*/
 function removeHtmlTag(html)
 {
   var plainText = html.replace(/<("[^"]*"|'[^']*'|[^'">])*>/gim, ''); // その他のHTMLタグを全て削除
@@ -155,11 +161,11 @@ function removeHtmlTag(html)
 }
 
 /*
- * HTMLのリンク情報からリンクURLとテキストを取得する
- * [0]: 全体
- * [1]: URL
- * [2]: テキスト
- */
+* HTMLのリンク情報からリンクURLとテキストを取得する
+* [0]: 全体
+* [1]: URL
+* [2]: テキスト
+*/
 function getLinkData(html)
 {
   var linkData = html.match(/<a href=\"(.*?)\".*?>(.*?)<\/a>/mi);
@@ -171,11 +177,11 @@ function getLinkData(html)
 }
 
 /*
- * 正規表現で文字列を取り出す。見つからない場合は空文字列を返す
- * content: 文字列
- * tempRegExp: RegExpオブジェクト
- * return: 文字列
- */
+* 正規表現で文字列を取り出す。見つからない場合は空文字列を返す
+* content: 文字列
+* tempRegExp: RegExpオブジェクト
+* return: 文字列
+*/
 function execRegExp(content, tempRegExp)
 {
   var resultStr = "";
@@ -188,8 +194,8 @@ function execRegExp(content, tempRegExp)
 }
 
 /*
- * Wordpressに投稿する記事をメール送信する
- */
+* Wordpressに投稿する記事をメール送信する
+*/
 function sendWordpress(date, url, url_text, site_name, text)
 {
   var mail = "tafi954roti@post.wordpress.com"; // Wordpress「室蘭情報まとめ」 http://blogmatome.wpblog.jp/
@@ -206,26 +212,8 @@ function sendWordpress(date, url, url_text, site_name, text)
   var option = {htmlBody:body};
   
   GmailApp.sendEmail(mail, tweet, body, option); // sendEmail(recipient, subject, body, options)
+  myLog.info({mail:mail, tweet:tweet, body:body, option:option});
   Utilities.sleep(1000);
   
   return body;
 }
-
-// ログ用シートにログ出力するためのオブジェクト
-var LogObj = {
-  logSheet: SpreadsheetApp.getActiveSpreadsheet().getSheetByName('log'),
-  log: function(msg)
-  {
-    var tmpMsg = msg;
-    if(typeof tmpMsg == typeof [])
-    {
-      tmpMsg = {log: tmpMsg};
-    }
-    var j = JSON.stringify(tmpMsg);
-    this.logSheet.appendRow([new Date() , j]);
-  },
-  clear: function()
-  {
-    this.logSheet.clear();
-  }
-};
