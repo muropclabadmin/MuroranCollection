@@ -81,11 +81,11 @@ function getMailData(text)
     var td = t.match(/<td.*?>(.*?)<\/td>/gim);
     
     tempRegExp = new RegExp("<a style=\"color:#aaa;text-decoration:none\">(.+?)</a>", "gim");
-    var tempDate = tempRegExp.exec(t);
-    if(tempDate != null)
+    var tempDate = execRegExp(t, tempRegExp);
+    if(tempDate != "")
     {
       LogObj.log(tempDate);
-      date = tempDate[1];
+      date = tempDate;
     }
     
     for(var j=0; j<td.length; j++)
@@ -99,18 +99,22 @@ function getMailData(text)
         mailData[index] = {};
         mailData[index]['url'] = url[1];
         
+        var tmpResult = "";
+        
         // リンクアドレス
         tempRegExp = new RegExp("<a .+?https://www.google.com/url\?.+?>(.+?)</a>", "gim");
-        mailData[index]['url_text'] = removeHtmlTag(tempRegExp.exec(content)[1]).trim();
+        tmpResult = execRegExp(content, tempRegExp);
+        mailData[index]['url_text'] = removeHtmlTag(tmpResult).trim();
         
         // リンクする文字列
         tempRegExp = new RegExp("</div> <div style=.+?>(.+?)</div> </div>", "gim");
-        mailData[index]['text'] = removeHtmlTag(tempRegExp.exec(content)[1]).trim();
+        tmpResult = execRegExp(content, tempRegExp);
+        mailData[index]['text'] = removeHtmlTag(tmpResult).trim();
         
-        // <a style=\"text-decoration:none;color:#737373\"> <span>Yahoo!ロコ - Yahoo! JAPAN</span> </a>
         // サイト名
         tempRegExp = new RegExp("<a style=\"text-decoration:none;color:#737373\">(.+?)</a>", "gim");
-        mailData[index]['site_name'] = removeHtmlTag(tempRegExp.exec(content)[1]).trim();
+        tmpResult = execRegExp(content, tempRegExp);
+        mailData[index]['site_name'] = removeHtmlTag(tmpResult).trim();
         
         // 日付
         mailData[index]['date'] = date;
@@ -154,6 +158,23 @@ function getLinkData(html)
 }
 
 /*
+ * 正規表現で文字列を取り出す。見つからない場合は空文字列を返す
+ * content: 文字列
+ * tempRegExp: RegExpオブジェクト
+ * return: 文字列
+ */
+function execRegExp(content, tempRegExp)
+{
+  var resultStr = "";
+  var tmp = tempRegExp.exec(content);
+  if(tmp != null)
+  {
+    resultStr = tmp[1];
+  }
+  return resultStr;
+}
+
+/*
  * Wordpressに投稿する記事をメール送信する
  */
 function sendWordpress(date, url, url_text, site_name, text)
@@ -164,10 +185,11 @@ function sendWordpress(date, url, url_text, site_name, text)
   var category = year+","+month+","+date;
   var publicize = "twitter";
   var thumnail_url = "https://blinky.nemui.org/shot/large?"+url;
-  var thumnail_link = "<a href=\""+url+"\" target=\"_blank\">"+thumnail_url+"</a>";
-  var tweet = date+" - "+url_text+"\n"+thumnail_url;
-  var link = date+" - "+"<a href=\""+url+"\" target=\"_blank\">"+url_text+"</a>";
-  var body = "[title "+url_text+"][category "+category+"][publicize "+publicize+"]"+tweet+"[/publicize]\n"+link+" - "+site_name+"\n\n"+text+"\n"+thumnail_link;
+  var thumnail_link = "<a href='"+url+"' target='_blank'><img src='"+thumnail_url+"' /></a>";
+  var tweet = date+" - "+url_text;
+  var link = date+" - <a href='"+url+"' target='_blank'>"+url_text+"</a>";
+  var jetpack_tag = "[title "+url_text+"][category "+category+"][publicize "+publicize+"]"+tweet+"[/publicize]";
+  var body = jetpack_tag+"\n"+link+" - "+site_name+"<br />\n<br />\n"+thumnail_link+"<br />\n"+text;
   var option = {htmlBody:body};
   
   GmailApp.sendEmail(mail, tweet, body, option); // sendEmail(recipient, subject, body, options)
