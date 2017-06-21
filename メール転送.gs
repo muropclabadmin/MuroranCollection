@@ -6,7 +6,12 @@
 function main()
 {
   var mc = new MuroranCollection();
-  mc.main();
+  var start = 0;
+  var max = 3
+  var threads = null;
+  
+  threads = GmailApp.search('label:webアプリ-google-googlealerts-室蘭 is:unread', start, max);
+  mc.main(threads);
 }
 
 /**
@@ -55,12 +60,8 @@ var MuroranCollection = (function() {
   /**
   * メイン処理
   */
-  p.main = function()
+  p.main = function(threads)
   {
-    var start = 0;
-    var max = 3
-    var threads = GmailApp.search('label:webアプリ-google-googlealerts-室蘭 is:unread', start, max);
-    
     this.myLog.clear();
     
     // メールの送信回数の確認
@@ -116,13 +117,15 @@ var MuroranCollection = (function() {
         
         for(var mail_count=0; mail_count<mailData.length; mail_count++)
         {
-          var date = mailData[mail_count]['date'];
-          var url = mailData[mail_count]['url'];
-          var url_text = mailData[mail_count]['url_text'];
-          var text = mailData[mail_count]['text'];
-          var site_name = mailData[mail_count]['site_name'];
+		  var md = mailData[mail_count];
+          var date = md['date'];
+          var url = md['url'];
+          var url_text = md['url_text'];
+          var text = md['text'];
+          var site_name = md['site_name'];
+		  var category = md['category'];
           
-          var mailBody = this.sendWordpress(date, url, url_text, site_name, text); // メール送信
+          var mailBody = this.sendWordpress(date, url, url_text, site_name, text, category); // メール送信
           
           // シートにメール情報を記録
           this.mailDateCell.setValue(new Date());
@@ -158,19 +161,32 @@ var MuroranCollection = (function() {
     var trList = plainText.match(/<tr>(.+?)<\/tr>/gi);
     var mailData = [];
     var date = ""; // メールの日付
+    var category = ""; // カテゴリ
     var index = 0;
     for(var i=0; i<trList.length; i++)
     {
-      var t = trList[i];
-      this.myLog.debug(t);
-      var td = t.match(/<td.*?>(.*?)<\/td>/gim);
+      var trText = trList[i];
+      this.myLog.debug(trText);
+      var td = trText.match(/<td.*?>(.*?)<\/td>/gim);
       
+      // 日付の取得
       tempRegExp = new RegExp("<a style=\"color:#aaa;text-decoration:none\">(.+?)</a>", "gim");
-      var tempDate = this.execRegExp(t, tempRegExp);
+      var tempDate = this.execRegExp(trText, tempRegExp);
       if(tempDate != "")
       {
-        this.myLog.debug(tempDate);
-        date = tempDate;
+        date = tempDate.trim();
+        this.myLog.debug(date);
+		continue;
+      }
+	  
+	  // カテゴリの取得(ニュース、ウェブ、ブログなど)
+      tempRegExp = new RegExp("<span style=\"font-size:12px;color:#737373\">(.+?)</span>", "gim");
+      var tempCategory = this.execRegExp(trText, tempRegExp);
+      if(tempCategory != "")
+      {
+        category = tempCategory.trim();
+        this.myLog.debug(category);
+		continue;
       }
       
       for(var j=0; j<td.length; j++)
@@ -216,6 +232,9 @@ var MuroranCollection = (function() {
           
           // 日付
           mailData[index]['date'] = date;
+          
+          // カテゴリ
+          mailData[index]['category'] = category;
           
           index++;
         }
@@ -283,14 +302,15 @@ var MuroranCollection = (function() {
   * @param {String} url_text 元記事のタイトル
   * @param {String} site_name 元記事のサイト名
   * @param {String} text 元記事の内容
+  * @param {String} cate 元記事の種類(ニュース、ウェブ、ブログなど)
   * @return {String} 送信したメール本文
   */
-  p.sendWordpress = function(date, url, url_text, site_name, text)
+  p.sendWordpress = function(date, url, url_text, site_name, text, cate)
   {
     var mail = "tafi954roti@post.wordpress.com"; // Wordpress「室蘭情報まとめ」 http://blogmatome.wpblog.jp/
     var year = date.replace(/年.+?月.+?日/gi, "年");
     var month = date.replace(/月.+?日/gi, "月");
-    var category = year+","+month+","+date;
+    var category = cate+","+year+","+month+","+date;
     var publicize = "twitter";
     var thumnail_url = "https://blinky.nemui.org/shot/large?"+url;
     var thumnail_link = "<a href='"+url+"' target='_blank'><img src='"+thumnail_url+"' /></a>";
