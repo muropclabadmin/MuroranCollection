@@ -4,25 +4,17 @@
 * ログ用シートにログ出力するためのオブジェクト
 */
 var MyLog = (function() {
-  /** @const */
-  var LOG_SHEET = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('log');
-  
   /** @constructor */
   var MyLog = function(logSheet) {
-    if(!(this instanceof MyLog)) {
-      return new MyLog(this.LOG_SHEET);
+    if(!(this instanceof MyLog) || logSheet == null) {
+      return new MyLog(SpreadsheetApp.getActiveSpreadsheet().getSheetByName('log'));
     }
     
     /**
     * ログ出力用シート
     * @type {Sheet}
     */
-    this.logSheet;
-    if(logSheet != null) {
-      this.logSheet = logSheet;
-    } else {
-      this.logSheet = this.LOG_SHEET;
-    }
+    this.logSheet = logSheet;
   };
   
   var p = MyLog.prototype;

@@ -316,8 +316,9 @@ var MuroranCollection = (function() {
     var thumnail_link = "<a href='"+url+"' target='_blank'><img src='"+thumnail_url+"' /></a>";
     var tweet = date+" - "+url_text;
     var link = date+" - <a href='"+url+"' target='_blank'>"+url_text+"</a>";
-    var jetpack_tag = "[title "+url_text+"][category "+category+"][publicize "+publicize+"]"+tweet+"[/publicize]";
-    var body = jetpack_tag+"\n"+link+" - "+site_name+"<br />\n<br />\n"+thumnail_link+"<br />\n"+text;
+    //var jetpack_tag = "[title "+url_text+"][category "+category+"][publicize "+publicize+"]"+tweet+"[/publicize]";
+    var jetpack_tag = "[title "+url_text+"][category "+category+"][publicize "+publicize+"]";
+    var body = jetpack_tag+"\n"+link+" - "+site_name+"\n\n"+thumnail_link+"\n"+text;
     var option = {htmlBody:body};
     
     // メール送信
