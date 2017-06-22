@@ -70,17 +70,19 @@ var MuroranCollection = (function() {
     if(preSendDate != now)
     {
       // 日付が変わっていた場合、メール送信回数をリセットする
+      this.statusSheet.insertRows(2);
       this.mailCountCell.setValue(0);
     }
     
     // 古い情報の削除
     var lastRowCount = this.sendmailSheet.getLastRow();
-    this.myLog.debug(lastRowCount);
+    this.myLog.debug({lastRowCount:lastRowCount});
     if(lastRowCount > 200)
     {
       var overSize = lastRowCount - 200;
-      this.myLog.info(overSize);
-      this.sendmailSheet.deleteRows(1, overSize);
+      this.myLog.info({overSize:overSize});
+      var delSize = overSize + 20;
+      this.sendmailSheet.deleteRows(1, delSize);
     }
     
     this.execute(threads);
@@ -97,11 +99,13 @@ var MuroranCollection = (function() {
   */
   p.execute = function(mailThread)
   {
+    this.myLog.info({threadCount:mailThread.length});
     for(var n=0; n<mailThread.length; n++)
     {
       var thread = mailThread[n];
       
       var msgs = thread.getMessages();
+      this.myLog.info({msgsCount:msgs.length});
       for(var m=0; m<msgs.length; m++){
         var msg = msgs[m];
         if(!msg.isUnread())
@@ -153,12 +157,11 @@ var MuroranCollection = (function() {
     plainText = plainText.match(/<div style=.+>(.+?)<\/div>/gi)[0]; // メインとなる部分を取り出す
     plainText = plainText.replace(/[\f\r\v\u00a0\u1680\u180e\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]/gi, ''); // その他の制御コードを削除
     plainText = plainText.replace(/[\t]/gi, '  '); // TABを空白2文字に変換
-    
-    // 各行からURL情報を取り出す
-    var linetext = plainText.split('<td style="padding-left:18px"></td>'); // 分解
+    this.myLog.debug({plainText:plainText});
     
     // TABLEタグの中からTDタグの中身を取り出す
-    var trList = plainText.match(/<tr>(.+?)<\/tr>/gi);
+    var trList = plainText.match(/<tr.*?>(.+?)<\/tr>/gim);
+    this.myLog.debug({trList:trList});
     var mailData = [];
     var date = ""; // メールの日付
     var category = ""; // カテゴリ
@@ -175,7 +178,7 @@ var MuroranCollection = (function() {
       if(tempDate != "")
       {
         date = tempDate.trim();
-        this.myLog.debug(date);
+        this.myLog.debug({date:date});
 		continue;
       }
 	  
@@ -185,7 +188,7 @@ var MuroranCollection = (function() {
       if(tempCategory != "")
       {
         category = tempCategory.trim();
-        this.myLog.debug(category);
+        this.myLog.debug({category:category});
 		continue;
       }
       
@@ -220,11 +223,6 @@ var MuroranCollection = (function() {
           tmpResult = this.execRegExp(content, tempRegExp);
           mailData[index]['url_text'] = this.removeHtmlTag(tmpResult).trim();
           
-          // 説明文
-          tempRegExp = new RegExp("</div> <div style=.+?>(.+?)</div> </div>", "gim");
-          tmpResult = this.execRegExp(content, tempRegExp);
-          mailData[index]['text'] = this.removeHtmlTag(tmpResult).trim();
-          
           // サイト名
           tempRegExp = new RegExp("<a style=\"text-decoration:none;color:#737373\">(.+?)</a>", "gim");
           tmpResult = this.execRegExp(content, tempRegExp);
@@ -236,12 +234,27 @@ var MuroranCollection = (function() {
           // カテゴリ
           mailData[index]['category'] = category;
           
+          if(category == "ウェブ")
+          {
+            // 説明文
+            tempRegExp = new RegExp("</div> <div style=.+?>(.+?)</div> </div>", "gim");
+            tmpResult = this.execRegExp(content, tempRegExp);
+            mailData[index]['text'] = this.removeHtmlTag(tmpResult).trim();
+          }
+          else if(category == "ニュース")
+          {
+            // 説明文
+            tempRegExp = new RegExp("div itemprop=\"description\".+?>(.+?)</div>", "gim");
+            tmpResult = this.execRegExp(content, tempRegExp);
+            mailData[index]['text'] = this.removeHtmlTag(tmpResult).trim();
+          }
+          
           index++;
         }
       }
     }
     
-    this.myLog.debug(mailData);
+    this.myLog.debug({mailData:mailData});
     return mailData;
   };
   
